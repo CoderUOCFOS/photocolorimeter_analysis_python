@@ -1,0 +1,236 @@
+import re
+import numpy as np
+import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 22})
+
+#intesnity arrays
+r_y=np.array([])
+g_y=np.array([])
+b_y=np.array([])
+uv_y=np.array([])
+r_y_sc=np.array([])
+g_y_sc=np.array([])
+b_y_sc=np.array([])
+uv_y_sc=np.array([])
+
+#extracting all numbers from the file
+
+def file_open(file_name):
+    file = open(file_name, 'r')
+    
+    file = file.read()
+    
+    numbers = re.findall(r"[-+]?\d*\.\d+|\d+", file)
+    numbers=[eval(i) for i in numbers]
+        
+    numbers=np.array(numbers)
+    
+    #shortening the array to 12 readings
+    
+    data=numbers[0:12]
+    return data
+# =============================================================================
+#     print(type(data[1]))
+#     print(data)
+# =============================================================================
+
+def absorbance_calc(data): #using transmission data for visible
+    #red reading average
+    red_cum=0
+    red=np.array([]) #for storing each red value for a given drop num
+    for i in range(3,12,6):
+        red=np.append(red,data[i])
+        red_cum=data[i]+red_cum
+        red_avg=red_cum/2
+    red_err=np.std(red,ddof=1)
+    
+        
+    #green reading average
+    green=np.array([])
+    green_cum=0
+    for i in range(4,12,6):
+        green=np.append(green,data[i])
+        green_cum=data[i]+green_cum
+        green_avg=green_cum/2
+    green_err=np.std(green,ddof=1)
+        
+    #blue reading average
+    blue_cum=0
+    blue=np.array([])
+    for i in range(5,12,6):
+        blue=np.append(blue,data[i])
+        blue_cum=data[i]+blue_cum
+        blue_avg=blue_cum/2
+        
+    blue_err=np.std(blue,ddof=1)
+        
+    return 1023-red_avg,1023-green_avg,1023-blue_avg
+
+#blank intensity values
+data_I0=file_open("blank.txt")
+red_I0,green_I0,blue_I0=absorbance_calc(data_I0)
+
+files=["1 drop.txt","2 drops.txt","3 drops.txt","4 drops.txt","5 drops.txt","6 drops.txt","7 drops.txt","8 drops.txt","9 drops.txt","10 drops.txt"]
+
+for file_name in files:
+    
+    datas=file_open(file_name)
+    red_avg,green_avg,blue_avg=absorbance_calc(datas)
+
+    r_y=np.append(r_y,np.log(red_I0/red_avg))
+    g_y=np.append(g_y,np.log10(green_I0/green_avg))
+    b_y=np.append(b_y,np.log10(blue_I0/blue_avg))    
+    
+
+
+drops=np.array([1,2,3,4,5,6,7,8,9,10])
+
+def best_fit(x,y,colour):
+
+    val=np.polyfit(x,y,1)
+    y_new=np.polyval(val,x)
+    plt.plot(x,y_new,colour)
+    return val             
+
+plt.figure(1)
+plt.plot(drops,r_y,'r*')
+red_val1=best_fit(drops,r_y,"r-")
+plt.plot(drops,g_y,'g*')
+green_val1=best_fit(drops,g_y,"g-")
+plt.plot(drops,b_y,'b*')
+blue_val1=best_fit(drops,b_y,"b-")
+
+
+
+#for UV
+def absorbance_calc_uv(data): #using transmission data for uv
+    uv_cum=0
+    #red reading average
+    for i in range(1,6,2):
+        
+        uv_cum=data[i]+uv_cum
+        uv_avg=uv_cum/3
+        
+    
+        
+    return 1023-uv_avg
+
+#blank intensity values
+data_I0=file_open("blank_uv.txt")
+uv_I0=absorbance_calc_uv(data_I0)
+
+
+files_uv=["drop_1.txt","drop_2.txt","drop_3.txt","drop_4.txt","drop_5.txt","drop_6.txt","drop_7.txt","drop_8.txt","drop_9.txt","drop_10.txt"]
+
+
+for file_name in files_uv:
+    
+    datas_uv=file_open(file_name)
+    uv_avg=absorbance_calc_uv(datas_uv)
+
+    uv_y=np.append(uv_y,np.log(uv_I0/uv_avg))
+      
+    
+plt.plot(drops,uv_y,'m*')
+uv_val1=best_fit(drops,uv_y,"m-")
+plt.ylabel("Absorbance (-log(I/I0))",fontweight="bold")
+plt.xlabel("No. of red coloring drops per 50 cm-3",fontweight="bold")
+plt.title("Direct Transmission mesurements",fontweight="bold",fontsize=24)
+plt.legend(["Red LED data","Red LED (best fit)","Green LED","Green LED (best fit)","Blue LED","Blue LED (best fit)","UV LED","UV LED (best fit)"],fontsize="small",loc="center right")
+
+print("Fiited values for red is {r}".format(r=red_val1))
+print("Fiited values for green is {g}".format(g=green_val1))
+print("Fiited values for blue is {b}".format(b=blue_val1))
+print("Fiited values for UV is {uv}".format(uv=uv_val1))
+
+
+
+
+
+#for scattering
+#visible
+
+def absorbance_calc_sc(data): #using scattering data for visible
+    #red reading average
+    red_cum=0
+    for i in range(0,12,6):
+        
+        red_cum=data[i]+red_cum
+        red_avg=red_cum/2
+        
+    #green reading average
+    green_cum=0
+    for i in range(1,12,6):
+        
+        green_cum=data[i]+green_cum
+        green_avg=green_cum/2
+        
+    #blue reading average
+    blue_cum=0
+    for i in range(2,12,6):
+        
+        blue_cum=data[i]+blue_cum
+        blue_avg=blue_cum/2
+        
+    return 1023-red_avg,1023-green_avg,1023-blue_avg
+
+#blank intensity values
+data_I0_sc=file_open("blank.txt")
+red_I0_sc,green_I0_sc,blue_I0_sc=absorbance_calc_sc(data_I0_sc)
+
+for file_name in files:
+    
+    datas=file_open(file_name)
+    red_avg_sc,green_avg_sc,blue_avg_sc=absorbance_calc_sc(datas)
+
+    r_y_sc=np.append(r_y_sc,(red_avg_sc/red_I0_sc))
+    g_y_sc=np.append(g_y_sc,(green_avg_sc/green_I0_sc))
+    b_y_sc=np.append(b_y_sc,(blue_avg_sc/blue_I0_sc))  
+    
+plt.figure(2)
+plt.plot(drops,r_y_sc,'r*')
+red_val2=best_fit(drops,r_y_sc,"r-")
+plt.plot(drops,g_y_sc,'g*')
+green_val2=best_fit(drops,g_y_sc,"g-")
+plt.plot(drops,b_y_sc,'b*')
+blue_val2=best_fit(drops,b_y_sc,"b-")
+
+
+#for UV
+def absorbance_calc_uv_sc(data): #using scattering data for uv
+    uv_cum=0
+    #red reading average
+    for i in range(0,6,2):
+        
+        uv_cum=data[i]+uv_cum
+        uv_avg=uv_cum/3
+        
+    
+        
+    return 1023-uv_avg
+
+#blank intensity values
+data_I0_sc=file_open("blank_uv.txt")
+uv_I0_sc=absorbance_calc_uv_sc(data_I0_sc)
+
+
+
+for file_name in files_uv:
+    
+    datas_uv_sc=file_open(file_name)
+    uv_avg_sc=absorbance_calc_uv_sc(datas_uv_sc)
+
+    uv_y_sc=np.append(uv_y_sc,(uv_avg_sc/uv_I0_sc))
+      
+    
+plt.plot(drops,uv_y_sc,'m*')
+uv_val2=best_fit(drops,uv_y_sc,"m-")
+plt.ylabel("I/I0",fontweight="bold")
+plt.xlabel("No. of red coloring drops per 50 cm-3",fontweight="bold")
+plt.title("Scattering measurements",fontsize="24",fontweight="bold")
+plt.legend(["Red LED data","Red LED (best fit)","Green LED","Green LED (best fit)","Blue LED","Blue LED (best fit)","UV LED","UV LED (best fit)"],fontsize="x-small",loc="upper right")
+    
+print("Fiited values for red2 is {r}".format(r=red_val2))
+print("Fiited values for green2 is {g}".format(g=green_val2))
+print("Fiited values for blue2 is {b}".format(b=blue_val2))
+print("Fiited values for UV2 is {uv}".format(uv=uv_val2))
